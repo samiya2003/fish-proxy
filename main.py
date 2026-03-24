@@ -2,8 +2,6 @@ from fastapi import FastAPI, Request
 from fastapi.responses import Response
 import httpx
 import os
-import subprocess
-import tempfile
 
 app = FastAPI()
 
@@ -15,10 +13,8 @@ async def tts(request: Request):
     data = await request.json()
     message = data.get("message", {})
     text = message.get("text", data.get("text", ""))
-    sample_rate = int(message.get("sampleRate", 16000))
-    
+
     print(f"TEXT: {text}", flush=True)
-    print(f"SAMPLE RATE: {sample_rate}", flush=True)
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -28,21 +24,4 @@ async def tts(request: Request):
             timeout=30
         )
 
-    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
-        f.write(response.content)
-        mp3_path = f.name
-
-    pcm_path = mp3_path.replace(".mp3", ".pcm")
-    subprocess.run([
-        "ffmpeg", "-y", "-i", mp3_path,
-        "-f", "s16le", "-ac", "1", "-ar", str(sample_rate),
-        pcm_path
-    ], capture_output=True)
-
-    with open(pcm_path, "rb") as f:
-        pcm = f.read()
-
-    os.unlink(mp3_path)
-    os.unlink(pcm_path)
-
-    return Response(content=pcm, media_type="audio/raw")
+    return Response(content=response.content, media_type="audio/mpeg")
