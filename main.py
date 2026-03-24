@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import Response
 import httpx
 import os
+from pydub import AudioSegment
+import io
 
 app = FastAPI()
 
@@ -12,6 +14,7 @@ VOICE_ID = os.environ.get("VOICE_ID")
 async def tts(request: Request):
     data = await request.json()
     text = data.get("text", "")
+    sample_rate = data.get("sampleRate", 16000)
     
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -21,4 +24,8 @@ async def tts(request: Request):
             timeout=30
         )
     
-    return Response(content=response.content, media_type="audio/mpeg")
+    audio = AudioSegment.from_mp3(io.BytesIO(response.content))
+    audio = audio.set_channels(1).set_frame_rate(sample_rate).set_sample_width(2)
+    pcm = audio.raw_data
+    
+    return Response(content=pcm, media_type="audio/raw")
