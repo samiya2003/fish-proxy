@@ -14,7 +14,7 @@ VOICE_ID = os.environ.get("VOICE_ID")
 async def tts(request: Request):
     data = await request.json()
     text = data.get("text", "")
-    sample_rate = data.get("sampleRate", 16000)
+    sample_rate = int(data.get("sampleRate", 24000))
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
