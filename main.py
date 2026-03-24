@@ -15,8 +15,8 @@ async def tts(request: Request):
     data = await request.json()
     message = data.get("message", {})
     text = message.get("text", data.get("text", ""))
-    sample_rate = int(message.get("sampleRate", 16000))
-    
+    sample_rate = int(message.get("sampleRate", 8000))
+
     print(f"TEXT: {text}, SAMPLE RATE: {sample_rate}", flush=True)
 
     async with httpx.AsyncClient() as client:
@@ -30,23 +30,24 @@ async def tts(request: Request):
     mp3_file = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
     mp3_file.write(response.content)
     mp3_file.close()
-    
-    pcm_file = tempfile.NamedTemporaryFile(suffix=".pcm", delete=False)
-    pcm_path = pcm_file.name
-    pcm_file.close()
 
+    wav_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+    wav_path = wav_file.name
+    wav_file.close()
+
+    # Convert to mulaw WAV — the standard telephony format
     result = subprocess.run([
         "ffmpeg", "-y", "-i", mp3_file.name,
-        "-f", "s16le", "-ac", "1", "-ar", str(sample_rate),
-        pcm_path
+        "-codec:a", "pcm_mulaw", "-ac", "1", "-ar", str(sample_rate),
+        wav_path
     ], capture_output=True, text=True)
-    
+
     print(f"FFMPEG: {result.stderr}", flush=True)
 
-    with open(pcm_path, "rb") as f:
-        pcm = f.read()
+    with open(wav_path, "rb") as f:
+        wav_data = f.read()
 
     os.unlink(mp3_file.name)
-    os.unlink(pcm_path)
+    os.unlink(wav_path)
 
-    return Response(content=pcm, media_type="audio/raw")
+    return Response(content=wav_data, media_type="audio/wav")
