@@ -13,10 +13,11 @@ VOICE_ID = os.environ.get("VOICE_ID")
 @app.post("/tts")
 async def tts(request: Request):
     data = await request.json()
-    text = data.get("text", "")
-    sample_rate = int(data.get("sampleRate", 24000))
+    message = data.get("message", {})
+    text = message.get("text", data.get("text", ""))
+    sample_rate = int(message.get("sampleRate", 16000))
     
-    print(f"REQUEST DATA: {data}", flush=True)
+    print(f"TEXT: {text}", flush=True)
     print(f"SAMPLE RATE: {sample_rate}", flush=True)
 
     async with httpx.AsyncClient() as client:
